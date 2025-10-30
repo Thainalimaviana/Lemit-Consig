@@ -229,50 +229,42 @@ def consultar():
     dado = request.form["dado"].strip()
     dado_limpo = "".join(filter(str.isdigit, dado))
 
-    conn = None
-    registros = []
+    conn = get_conn()
+    c = conn.cursor()
+    is_sqlite = isinstance(conn, sqlite3.Connection)
+    placeholder = "?" if is_sqlite else "%s"
 
-    try:
-        conn = get_conn()
-        c = conn.cursor()
-        is_sqlite = isinstance(conn, sqlite3.Connection)
-        placeholder = "?" if is_sqlite else "%s"
+    if is_sqlite:
+        query = f"""
+            SELECT c.nome, c.cpf, t.telefone
+            FROM clientes c
+            LEFT JOIN telefones t ON c.id = t.cliente_id
+            WHERE 
+                REPLACE(REPLACE(REPLACE(c.cpf, '.', ''), '-', ''), ' ', '') = {placeholder}
+                OR LTRIM(REPLACE(REPLACE(REPLACE(c.cpf, '.', ''), '-', ''), ' ', ''), '0') = LTRIM({placeholder}, '0')
+                OR REPLACE(REPLACE(REPLACE(t.telefone, ' ', ''), '-', ''), '(', '') LIKE '%' || {placeholder} || '%'
+        """
+    else:
+        query = f"""
+            SELECT c.nome, c.cpf, t.telefone
+            FROM clientes c
+            LEFT JOIN telefones t ON c.id = t.cliente_id
+            WHERE 
+                REPLACE(REPLACE(REPLACE(c.cpf, '.', ''), '-', ''), ' ', '') = {placeholder}
+                OR TRIM(LEADING '0' FROM REPLACE(REPLACE(REPLACE(c.cpf, '.', ''), '-', ''), ' ', '')) =
+                   TRIM(LEADING '0' FROM {placeholder})
+                OR REPLACE(REPLACE(REPLACE(t.telefone, ' ', ''), '-', ''), '(', '') LIKE CONCAT('%', {placeholder}, '%')
+        """
 
-        if is_sqlite:
-            query = f"""
-                SELECT c.nome, c.cpf, t.telefone
-                FROM clientes c
-                LEFT JOIN telefones t ON c.id = t.cliente_id
-                WHERE 
-                    REPLACE(REPLACE(REPLACE(c.cpf, '.', ''), '-', ''), ' ', '') = {placeholder}
-                    OR REPLACE(REPLACE(REPLACE(LTRIM(c.cpf, '0'), '.', ''), '-', ''), ' ', '') = LTRIM({placeholder}, '0')
-                    OR REPLACE(REPLACE(REPLACE(t.telefone, ' ', ''), '-', ''), '(', '') LIKE '%' || {placeholder} || '%'
-            """
-        else:
-            query = f"""
-                SELECT c.nome, c.cpf, t.telefone
-                FROM clientes c
-                LEFT JOIN telefones t ON c.id = t.cliente_id
-                WHERE 
-                    REPLACE(REPLACE(REPLACE(c.cpf::text, '.', ''), '-', ''), ' ', '') = {placeholder}
-                    OR REPLACE(REPLACE(REPLACE(LTRIM(c.cpf::text, '0'), '.', ''), '-', ''), ' ', '') = LTRIM({placeholder}, '0')
-                    OR REPLACE(REPLACE(REPLACE(t.telefone::text, ' ', ''), '-', ''), '(', '') ILIKE CONCAT('%%', {placeholder}, '%%')
-            """
-
-        c.execute(query, (dado_limpo, dado_limpo, dado_limpo))
-        registros = c.fetchall()
-
-    except Exception as e:
-        print("Erro ao consultar:", e)
-        registros = []
-    finally:
-        if conn:
-            conn.close() 
+    c.execute(query, (dado_limpo, dado_limpo, dado_limpo))
+    registros = c.fetchall()
+    conn.close()
 
     if registros:
         nome = registros[0][0] or "-"
         cpf = registros[0][1] or "-"
         telefones = sorted({r[2] for r in registros if r[2]})
+
         return jsonify({
             "encontrado": True,
             "nome": nome,
@@ -284,12 +276,6 @@ def consultar():
             "encontrado": False,
             "mensagem": "Nenhum registro encontrado."
         })
-
-def normalizar_cpf(cpf_raw):
-    cpf = "".join(filter(str.isdigit, str(cpf_raw)))
-    if len(cpf) < 11:
-        cpf = cpf.zfill(11)
-    return cpf
 
 @app.route("/importar", methods=["GET", "POST"])
 def importar():
