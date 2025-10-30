@@ -244,7 +244,7 @@ def consultar():
             WHERE 
                 REPLACE(REPLACE(REPLACE(c.cpf, '.', ''), '-', ''), ' ', '') = {placeholder}
                 OR REPLACE(REPLACE(REPLACE(LTRIM(c.cpf, '0'), '.', ''), '-', ''), ' ', '') = LTRIM({placeholder}, '0')
-                OR REPLACE(REPLACE(REPLACE(t.telefone, ' ', ''), '-', ''), '(', '') ILIKE '%%' || {placeholder} || '%%'
+                OR REPLACE(REPLACE(REPLACE(t.telefone, ' ', ''), '-', ''), '(', '') ILIKE CONCAT('%%', {placeholder}, '%%')
         """
 
     try:
@@ -260,7 +260,6 @@ def consultar():
         nome = registros[0][0] or "-"
         cpf = registros[0][1] or "-"
         telefones = sorted({r[2] for r in registros if r[2]})
-
         return jsonify({
             "encontrado": True,
             "nome": nome,
