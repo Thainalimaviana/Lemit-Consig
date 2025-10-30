@@ -241,7 +241,7 @@ def consultar():
             LEFT JOIN telefones t ON c.id = t.cliente_id
             WHERE 
                 REPLACE(REPLACE(REPLACE(c.cpf, '.', ''), '-', ''), ' ', '') = {placeholder}
-                OR LTRIM(REPLACE(REPLACE(REPLACE(c.cpf, '.', ''), '-', ''), ' ', ''), '0') = LTRIM({placeholder}, '0')
+                OR REPLACE(REPLACE(REPLACE(LTRIM(c.cpf, '0'), '.', ''), '-', ''), ' ', '') = LTRIM({placeholder}, '0')
                 OR REPLACE(REPLACE(REPLACE(t.telefone, ' ', ''), '-', ''), '(', '') LIKE '%' || {placeholder} || '%'
         """
     else:
@@ -251,9 +251,8 @@ def consultar():
             LEFT JOIN telefones t ON c.id = t.cliente_id
             WHERE 
                 REPLACE(REPLACE(REPLACE(c.cpf, '.', ''), '-', ''), ' ', '') = {placeholder}
-                OR TRIM(LEADING '0' FROM REPLACE(REPLACE(REPLACE(c.cpf, '.', ''), '-', ''), ' ', '')) =
-                   TRIM(LEADING '0' FROM {placeholder})
-                OR REPLACE(REPLACE(REPLACE(t.telefone, ' ', ''), '-', ''), '(', '') LIKE CONCAT('%', {placeholder}, '%')
+                OR REPLACE(REPLACE(REPLACE(LTRIM(c.cpf, '0'), '.', ''), '-', ''), ' ', '') = LTRIM({placeholder}, '0')
+                OR REPLACE(REPLACE(REPLACE(t.telefone, ' ', ''), '-', ''), '(', '') LIKE CONCAT('%%', {placeholder}, '%%')
         """
 
     c.execute(query, (dado_limpo, dado_limpo, dado_limpo))
@@ -264,7 +263,6 @@ def consultar():
         nome = registros[0][0] or "-"
         cpf = registros[0][1] or "-"
         telefones = sorted({r[2] for r in registros if r[2]})
-
         return jsonify({
             "encontrado": True,
             "nome": nome,
