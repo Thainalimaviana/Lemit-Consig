@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="UTF-8">
+  <title>Importar</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename='img/logo.png') }}">
+  <link href="https://fonts.googleapis.com/css2?family=Tomorrow&display=swap" rel="stylesheet">
+
+  <style>
+    .file-upload-wrapper {
+      position: relative;
+      width: 100%;
+      max-width: 420px;
+      margin: 25px auto;
+    }
+
+    .file-upload-wrapper input[type="file"] {
+      opacity: 0;
+      width: 100%;
+      height: 55px;
+      position: absolute;
+      cursor: pointer;
+      z-index: 2;
+    }
+
+    .file-upload-label {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(255, 255, 255, 0.12);
+      border: 2px dashed rgba(0, 128, 0, 0.6);
+      border-radius: 12px;
+      color: var(--cor-texto);
+      height: 55px;
+      font-weight: 600;
+      font-size: 15px;
+      text-align: center;
+      cursor: pointer;
+      transition: 0.3s;
+      box-shadow: 0 6px 15px rgba(0, 0, 0, 0.15);
+      backdrop-filter: blur(8px);
+    }
+
+    .file-upload-label:hover {
+      border-color: #00c000;
+      background: rgba(255, 255, 255, 0.2);
+      transform: scale(1.02);
+    }
+
+    .file-upload-label i {
+      margin-right: 8px;
+      color: #00b300;
+      font-size: 18px;
+    }
+
+    .file-upload-text {
+      color: var(--cor-texto);
+      font-weight: 500;
+    }
+  </style>
+</head>
+
+<script src="/static/js/theme.js"></script>
+
+<body class="pagina">
+  <button class="menu-toggle" id="menuToggle"><i class="fa fa-bars"></i></button>
+
+  <div class="sidebar" id="sidebar">
+    <div>
+      <img src="static/img/logo.png" style="width: 110px; padding-left: 50px;">
+      <div class="logo">Importar CSV</div>
+      <div class="user-info">
+        <h3>{{ session["user"] }}</h3>
+        <span>{{ session["role"] }}</span>
+      </div>
+
+      <ul class="menu">
+        <li><a href="/index">▸ Consulta</a></li>
+        <li><a href="/importar">▸ Importar CSV</a></li>
+        <li><a href="/usuarios">▸ Gerenciar Usuários</a></li>
+        <li><a href="/register">▸ Criar Usuário</a></li>
+        <li><a href="/dashboard">▸ Dashboard</a></li>
+      </ul>
+    </div>
+
+    <div class="menu-footer">
+      <button id="toggle-theme"><i class="fa fa-moon"></i> Tema</button>
+      <a href="/logout" class="logout">▸ Sair</a>
+    </div>
+  </div>
+
+  <div class="content">
+    <h1 class="titulo-tomorrow">Importar Base de Dados</h1>
+
+    <div class="container">
+      {% if erro %}
+      <div style="background:rgba(255,0,0,0.2);padding:10px;border-radius:8px;color:#000000;margin-bottom:10px;">{{ erro
+        }}</div>
+      {% endif %}
+      {% if sucesso %}
+      <div style="background:rgba(0,255,0,0.2);padding:10px;border-radius:8px;color:#000000;margin-bottom:10px;">{{
+        sucesso }}</div>
+      {% endif %}
+
+      <form method="POST" enctype="multipart/form-data">
+        <p>Envie um arquivo <strong>.csv</strong> contendo as colunas:</p>
+        <p><code>nome, cpf, telefone1, telefone2, telefone3, telefone4, telefone5</code></p>
+
+        <div class="file-upload-wrapper">
+          <input type="file" id="arquivo" name="arquivo" accept=".csv" required onchange="mostrarNomeArquivo(this)">
+          <label class="file-upload-label" for="arquivo">
+            <i class="fa fa-file-csv"></i>
+            <span class="file-upload-text" id="file-name">Escolher arquivo .csv</span>
+          </label>
+        </div>
+
+        <button class="azul" type="submit"><i class="fa fa-upload"></i> Importar</button>
+        <a href="/index" class="btn-voltar-topo" style="margin-left:10px;">
+          <i class="fa fa-arrow-left"></i>Voltar
+        </a>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    const menuToggle = document.getElementById("menuToggle");
+    const sidebar = document.getElementById("sidebar");
+    const content = document.querySelector(".content");
+
+    menuToggle.addEventListener("click", () => {
+      sidebar.classList.toggle("active");
+      content.classList.toggle("active");
+      menuToggle.classList.toggle("mover");
+    });
+
+    function mostrarNomeArquivo(input) {
+      const label = document.getElementById('file-name');
+      if (input.files && input.files.length > 0) {
+        label.textContent = input.files[0].name;
+      } else {
+        label.textContent = "Escolher arquivo .csv";
+      }
+    }
+  </script>
+</body>
+
+</html>

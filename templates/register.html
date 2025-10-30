@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Criar Usuário</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename='img/logo.png') }}">
+  <link href="https://fonts.googleapis.com/css2?family=Tomorrow&display=swap" rel="stylesheet">
+</head>
+
+<script src="/static/js/theme.js"></script>
+<body class="pagina">
+  <button class="menu-toggle" id="menuToggle"><i class="fa fa-bars"></i></button>
+
+  <div class="sidebar" id="sidebar">
+    <div>
+      <img src="static/img/logo.png" style="width: 110px; padding-left: 50px;">
+      <div class="logo">Registrar</div>
+      <div class="user-info">
+        <h3>{{ session["user"] }}</h3>
+        <span>{{ session["role"] }}</span>
+      </div>
+
+      <ul class="menu">
+        <li><a href="/index">▸ Consulta</a></li>
+        <li><a href="/importar">▸ Importar CSV</a></li>
+        <li><a href="/usuarios">▸ Gerenciar Usuários</a></li>
+        <li><a href="/dashboard">▸ Dashboard</a></li>
+      </ul>
+    </div>
+
+    <div class="menu-footer">
+      <button id="toggle-theme"><i class="fa fa-moon"></i> Tema</button>
+      <a href="/logout" class="logout">▸ Sair</a>
+    </div>
+  </div>
+
+  <div class="content">
+    <h1 class="titulo-tomorrow">Criar Novo Usuário</h1>
+
+    <div class="container">
+      {% if sucesso %}
+        <div style="background:rgba(0,255,0,0.2);padding:10px;border-radius:8px;color:#b4ffb4;margin-bottom:10px;">{{ sucesso }}</div>
+      {% endif %}
+      {% if erro %}
+        <div style="background:rgba(255,0,0,0.2);padding:10px;border-radius:8px;color:#ffbfbf;margin-bottom:10px;">{{ erro }}</div>
+      {% endif %}
+
+      <form method="POST">
+        <input type="text" name="nome" placeholder="Nome do usuário" required class="barra-cpf">
+        <input type="password" name="senha" placeholder="Senha" required class="barra-cpf">
+        <select name="role" class="barra-cpf">
+          <option value="user">Usuário Comum</option>
+          <option value="admin">Administrador</option>
+        </select>
+        <div class="button-group">
+          <button class="azul" type="submit"><i class="fa fa-user-plus"></i> Criar Usuário</button>
+          <a href="/usuarios" class="vermelho btn" style="text-decoration:none;padding:12px 26px;border-radius:8px;">Cancelar</a>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    const menuToggle = document.getElementById("menuToggle");
+    const sidebar = document.getElementById("sidebar");
+    const content = document.querySelector(".content");
+
+    menuToggle.addEventListener("click", () => {
+      sidebar.classList.toggle("active");
+      content.classList.toggle("active");
+      menuToggle.classList.toggle("mover");
+    });
+  </script>
+</body>
+</html>

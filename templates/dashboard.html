@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Dashboard - Admin</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Tomorrow&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='img/logo.png') }}">
+</head>
+
+{% macro formatar_numero(valor) %}
+  {% if valor >= 1000000000 %}
+    {{ '%.2f'|format(valor / 1000000000) }} bi
+  {% elif valor >= 1000000 %}
+    {{ '%.2f'|format(valor / 1000000) }} mi
+  {% elif valor >= 1000 %}
+    {{ '%.0f'|format(valor / 1000) }} mil
+  {% else %}
+    {{ valor }}
+  {% endif %}
+{% endmacro %}
+
+<style>
+.linha-separadora {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  margin: 20px 0;
+}
+
+.linha-separadora::before,
+.linha-separadora::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(to right, transparent, var(--cor-texto), transparent);
+  margin: 0 10px;
+}
+
+.linha-separadora span {
+  font-family: 'Poppins', sans-serif;
+  font-weight: 600;
+  color: var(--cor-texto);
+  letter-spacing: 0.5px;
+}
+</style>
+
+<script src="/static/js/theme.js"></script>
+
+<body class="pagina">
+    <button class="menu-toggle" id="menuToggle"><i class="fa fa-bars"></i></button>
+
+    <div class="sidebar" id="sidebar">
+        <div>
+            <div class="logo">Dashboard</div>
+            <div class="user-info">
+                <h3>{{ session["user"] }}</h3>
+                <span>{{ session["role"] }}</span>
+            </div>
+
+            <ul class="menu">
+                <li><a href="/index">▸ Consulta</a></li>
+                <li><a href="/importar">▸ Importar CSV</a></li>
+                <li><a href="/usuarios">▸ Gerenciar Usuários</a></li>
+                <li><a href="/register">▸ Criar Usuário</a></li>
+            </ul>
+        </div>
+
+        <div class="menu-footer">
+            <button id="toggle-theme"><i class="fa fa-moon"></i> Tema</button>
+            <a href="/logout" class="logout">▸ Sair</a>
+        </div>
+    </div>
+
+    <div class="content">
+        <h1 class="titulo-tomorrow">Painel de Monitoramento</h1>
+
+        <div class="container">
+            <h2 style="margin-bottom:15px;">Total de CPFs Importados</h2>
+            <h1 style="font-size:55px; margin-bottom:35px;">{{ formatar_numero(total_geral) }}</h1>
+
+            <div class="linha-separadora">
+                <span>Armazenamento</span>
+            </div>
+
+            <p><b>PostgreSQL:</b> {{ total_pg }} registros</p>
+            <div class="barra-uso">
+                <div class="preenchimento postgre"
+                    style="width: {{ pg_size_mb|round(2) / 15360 * 100 if pg_size_mb > 0 else 0 }}%;"></div>
+                <span class="texto-barra">{{ pg_size_pretty }} usados</span>
+            </div>
+
+            <p style="margin-top:25px;"><b>SQLite Local:</b> {{ total_local }} registros</p>
+            <div class="barra-uso">
+                <div class="preenchimento sqlite" style="width: {{ local_used_percent }}%;"></div>
+                <span class="texto-barra">{{ local_used_mb }} MB usados de {{ sqlite_limit_mb }} MB</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const menuToggle = document.getElementById("menuToggle");
+        const sidebar = document.getElementById("sidebar");
+        const content = document.querySelector(".content");
+        menuToggle.addEventListener("click", () => {
+            sidebar.classList.toggle("active");
+            content.classList.toggle("active");
+            menuToggle.classList.toggle("mover");
+        });
+    </script>
+</body>
+
+</html>

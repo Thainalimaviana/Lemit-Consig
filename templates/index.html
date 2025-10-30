@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="UTF-8">
+  <title>Consulta</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Tomorrow&display=swap" rel="stylesheet">
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename='img/logo.png') }}">
+</head>
+
+<script src="/static/js/theme.js"></script>
+
+<body class="pagina">
+  <button class="menu-toggle" id="menuToggle"><i class="fa fa-bars"></i></button>
+
+  <div class="sidebar" id="sidebar">
+    <div>
+      <img src="static/img/logo.png" style="width: 110px; padding-left: 50px;">
+      <div class="logo">Consultar</div>
+      <div class="user-info">
+        <h3>{{ usuario }}</h3>
+        <span>{{ role }}</span>
+      </div>
+
+      <ul class="menu">
+        <li><a href="/index">▸ Consulta</a></li>
+        {% if role == 'admin' %}
+        <li><a href="/importar">▸ Importar CSV</a></li>
+        <li><a href="/usuarios">▸ Gerenciar Usuários</a></li>
+        <li><a href="/register">▸ Criar Usuário</a></li>
+        <li><a href="/dashboard">▸ Dashboard</a></li>
+        {% endif %}
+      </ul>
+    </div>
+
+    <div class="menu-footer">
+      <button id="toggle-theme"><i class="fa fa-moon"></i> Tema</button>
+      <a href="/logout" class="logout">▸ Sair</a>
+    </div>
+  </div>
+
+  <div class="content">
+    <h1 class="titulo-tomorrow">Consulta Individual</h1>
+
+    <div class="container">
+      <form id="form-consulta">
+        <select id="tipo" class="barra-cpf">
+          <option value="cpf">CPF</option>
+          <option value="telefone">Telefone</option>
+        </select>
+        <input type="text" id="dado" name="dado" class="barra-cpf" placeholder="Digite o CPF ou telefone" required>
+        <div class="button-group">
+          <button class="azul" type="submit"><i class="fa fa-search"></i> Consultar</button>
+          <button id="btn-limpar" class="vermelho" type="button"><i class="fa fa-trash"></i> Limpar</button>
+        </div>
+      </form>
+
+      <div id="resultado" class="resultado" style="display:none;">
+        <p><strong>Nome:</strong> <span id="res-nome"></span></p>
+        <p><strong>CPF:</strong> <span id="res-cpf"></span></p>
+        <p><strong>Telefones:</strong> <span id="res-tel"></span></p>
+        <p id="msg-nao-encontrado" style="color:#ff9c9c;display:none;">Nenhum registro encontrado.</p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const menuToggle = document.getElementById("menuToggle");
+    const sidebar = document.getElementById("sidebar");
+    const content = document.querySelector(".content");
+
+    menuToggle.addEventListener("click", () => {
+      sidebar.classList.toggle("active");
+      content.classList.toggle("active");
+      menuToggle.classList.toggle("mover");
+    });
+
+    const form = document.getElementById("form-consulta");
+    const resultadoDiv = document.getElementById("resultado");
+    const msgNao = document.getElementById("msg-nao-encontrado");
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const dado = document.getElementById("dado").value.trim();
+
+      const formData = new FormData();
+      formData.append("dado", dado);
+
+      const res = await fetch("/consultar", {
+        method: "POST",
+        body: formData
+      });
+
+      const data = await res.json();
+      resultadoDiv.style.display = "block";
+
+      if (data.encontrado) {
+        document.getElementById("res-nome").textContent = data.nome || "-";
+
+        let cpf = data.cpf || "";
+        if (cpf.length === 11 && /^\d+$/.test(cpf)) {
+          cpf = cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
+        }
+        document.getElementById("res-cpf").textContent = cpf || "-";
+
+        const telefones = (data.telefones && data.telefones.length)
+          ? data.telefones.join(" | ")
+          : "-";
+        document.getElementById("res-tel").textContent = telefones;
+
+        msgNao.style.display = "none";
+      } else {
+        document.getElementById("res-nome").textContent = "";
+        document.getElementById("res-cpf").textContent = "";
+        document.getElementById("res-tel").textContent = "";
+        msgNao.style.display = "block";
+      }
+    });
+
+    document.getElementById("btn-limpar").addEventListener("click", () => {
+      document.getElementById("dado").value = "";
+      resultadoDiv.style.display = "none";
+      msgNao.style.display = "none";
+    });
+  </script>
+
+</body>
+
+</html>
