@@ -13,8 +13,7 @@ except ImportError:
 app = Flask(__name__)
 app.secret_key = "chave_super_secreta_123"
 
-#DATABASE_URL = os.environ.get("DATABASE_URL")
-DATABASE_URL = None
+DATABASE_URL = os.environ.get("DATABASE_URL")
 DB_FILE = "local.db"
 
 
