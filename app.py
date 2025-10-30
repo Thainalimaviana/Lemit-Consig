@@ -22,7 +22,6 @@ def get_conn():
         return psycopg.connect(DATABASE_URL)
     return sqlite3.connect(DB_FILE, check_same_thread=False)
 
-
 def init_db():
     conn = get_conn()
     c = conn.cursor()
@@ -99,9 +98,18 @@ def init_db():
             c.execute("INSERT INTO users (nome, senha, role) VALUES (%s, %s, %s)",
                       (admin_name, admin_pass, "admin"))
 
+    if not isinstance(conn, sqlite3.Connection):
+        try:
+            c.execute("""
+                CREATE INDEX IF NOT EXISTS idx_cpf_numerico
+                ON clientes ((REPLACE(REPLACE(REPLACE(cpf, '.', ''), '-', ''), ' ', '')));
+            """)
+            print("✅ Índice idx_cpf_numerico criado ou já existente.")
+        except Exception as e:
+            print("Erro ao criar índice:", e)
+
     conn.commit()
     conn.close()
-
 
 def inserir_ou_atualizar_cliente(nome, cpf, telefones):
     conn = get_conn()
@@ -221,40 +229,45 @@ def consultar():
     dado = request.form["dado"].strip()
     dado_limpo = "".join(filter(str.isdigit, dado))
 
-    conn = get_conn()
-    c = conn.cursor()
-    is_sqlite = isinstance(conn, sqlite3.Connection)
-    placeholder = "?" if is_sqlite else "%s"
-
-    if is_sqlite:
-        query = f"""
-            SELECT c.nome, c.cpf, t.telefone
-            FROM clientes c
-            LEFT JOIN telefones t ON c.id = t.cliente_id
-            WHERE 
-                REPLACE(REPLACE(REPLACE(c.cpf, '.', ''), '-', ''), ' ', '') = {placeholder}
-                OR REPLACE(REPLACE(REPLACE(LTRIM(c.cpf, '0'), '.', ''), '-', ''), ' ', '') = LTRIM({placeholder}, '0')
-                OR REPLACE(REPLACE(REPLACE(t.telefone, ' ', ''), '-', ''), '(', '') LIKE '%' || {placeholder} || '%'
-        """
-    else:
-        query = f"""
-            SELECT c.nome, c.cpf, t.telefone
-            FROM clientes c
-            LEFT JOIN telefones t ON c.id = t.cliente_id
-            WHERE 
-                REPLACE(REPLACE(REPLACE(c.cpf, '.', ''), '-', ''), ' ', '') = {placeholder}
-                OR REPLACE(REPLACE(REPLACE(LTRIM(c.cpf, '0'), '.', ''), '-', ''), ' ', '') = LTRIM({placeholder}, '0')
-                OR REPLACE(REPLACE(REPLACE(t.telefone, ' ', ''), '-', ''), '(', '') ILIKE CONCAT('%%', {placeholder}, '%%')
-        """
+    conn = None
+    registros = []
 
     try:
+        conn = get_conn()
+        c = conn.cursor()
+        is_sqlite = isinstance(conn, sqlite3.Connection)
+        placeholder = "?" if is_sqlite else "%s"
+
+        if is_sqlite:
+            query = f"""
+                SELECT c.nome, c.cpf, t.telefone
+                FROM clientes c
+                LEFT JOIN telefones t ON c.id = t.cliente_id
+                WHERE 
+                    REPLACE(REPLACE(REPLACE(c.cpf, '.', ''), '-', ''), ' ', '') = {placeholder}
+                    OR REPLACE(REPLACE(REPLACE(LTRIM(c.cpf, '0'), '.', ''), '-', ''), ' ', '') = LTRIM({placeholder}, '0')
+                    OR REPLACE(REPLACE(REPLACE(t.telefone, ' ', ''), '-', ''), '(', '') LIKE '%' || {placeholder} || '%'
+            """
+        else:
+            query = f"""
+                SELECT c.nome, c.cpf, t.telefone
+                FROM clientes c
+                LEFT JOIN telefones t ON c.id = t.cliente_id
+                WHERE 
+                    REPLACE(REPLACE(REPLACE(c.cpf::text, '.', ''), '-', ''), ' ', '') = {placeholder}
+                    OR REPLACE(REPLACE(REPLACE(LTRIM(c.cpf::text, '0'), '.', ''), '-', ''), ' ', '') = LTRIM({placeholder}, '0')
+                    OR REPLACE(REPLACE(REPLACE(t.telefone::text, ' ', ''), '-', ''), '(', '') ILIKE CONCAT('%%', {placeholder}, '%%')
+            """
+
         c.execute(query, (dado_limpo, dado_limpo, dado_limpo))
         registros = c.fetchall()
+
     except Exception as e:
         print("Erro ao consultar:", e)
         registros = []
     finally:
-        conn.close()
+        if conn:
+            conn.close() 
 
     if registros:
         nome = registros[0][0] or "-"
