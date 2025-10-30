@@ -251,8 +251,8 @@ def consultar():
             LEFT JOIN telefones t ON c.id = t.cliente_id
             WHERE 
                 REPLACE(REPLACE(REPLACE(c.cpf, '.', ''), '-', ''), ' ', '') = {placeholder}
-                OR REPLACE(REPLACE(REPLACE(LTRIM(c.cpf, '0'), '.', ''), '-', ''), ' ', '') = LTRIM({placeholder}, '0')
-                OR REPLACE(REPLACE(REPLACE(t.telefone, ' ', ''), '-', ''), '(', '') LIKE CONCAT('%%', {placeholder}, '%%')
+                OR REPLACE(REPLACE(REPLACE(LTRIM(c.cpf, '0'), '.', ''), '-', ''), ' ', '') = LTRIM({placeholder}::text, '0')
+                OR REPLACE(REPLACE(REPLACE(t.telefone, ' ', ''), '-', ''), '(', '') LIKE CONCAT('%%', {placeholder}::text, '%%')
         """
 
     c.execute(query, (dado_limpo, dado_limpo, dado_limpo))
