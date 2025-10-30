@@ -3,4 +3,4 @@ requests
 Werkzeug
 gunicorn
 psycopg[binary]
-pytz
+pandas
