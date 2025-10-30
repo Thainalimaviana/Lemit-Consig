@@ -216,7 +216,6 @@ def index():
         return redirect(url_for("login"))
     return render_template("index.html", usuario=session["user"], role=session["role"])
 
-
 @app.route("/consultar", methods=["POST"])
 def consultar():
     dado = request.form["dado"].strip()
@@ -224,21 +223,38 @@ def consultar():
 
     conn = get_conn()
     c = conn.cursor()
-    placeholder = "?" if isinstance(conn, sqlite3.Connection) else "%s"
+    is_sqlite = isinstance(conn, sqlite3.Connection)
+    placeholder = "?" if is_sqlite else "%s"
 
-    query = f"""
-        SELECT c.nome, c.cpf, t.telefone
-        FROM clientes c
-        LEFT JOIN telefones t ON c.id = t.cliente_id
-        WHERE 
-            REPLACE(REPLACE(REPLACE(c.cpf, '.', ''), '-', ''), ' ', '') = {placeholder}
-            OR REPLACE(REPLACE(REPLACE(LTRIM(c.cpf, '0'), '.', ''), '-', ''), ' ', '') = LTRIM({placeholder}, '0')
-            OR REPLACE(REPLACE(REPLACE(t.telefone, ' ', ''), '-', ''), '(', '') LIKE '%' || {placeholder} || '%'
-    """
+    if is_sqlite:
+        query = f"""
+            SELECT c.nome, c.cpf, t.telefone
+            FROM clientes c
+            LEFT JOIN telefones t ON c.id = t.cliente_id
+            WHERE 
+                REPLACE(REPLACE(REPLACE(c.cpf, '.', ''), '-', ''), ' ', '') = {placeholder}
+                OR REPLACE(REPLACE(REPLACE(LTRIM(c.cpf, '0'), '.', ''), '-', ''), ' ', '') = LTRIM({placeholder}, '0')
+                OR REPLACE(REPLACE(REPLACE(t.telefone, ' ', ''), '-', ''), '(', '') LIKE '%' || {placeholder} || '%'
+        """
+    else:
+        query = f"""
+            SELECT c.nome, c.cpf, t.telefone
+            FROM clientes c
+            LEFT JOIN telefones t ON c.id = t.cliente_id
+            WHERE 
+                REPLACE(REPLACE(REPLACE(c.cpf, '.', ''), '-', ''), ' ', '') = {placeholder}
+                OR REPLACE(REPLACE(REPLACE(LTRIM(c.cpf, '0'), '.', ''), '-', ''), ' ', '') = LTRIM({placeholder}, '0')
+                OR REPLACE(REPLACE(REPLACE(t.telefone, ' ', ''), '-', ''), '(', '') ILIKE '%%' || {placeholder} || '%%'
+        """
 
-    c.execute(query, (dado_limpo, dado_limpo, dado_limpo))
-    registros = c.fetchall()
-    conn.close()
+    try:
+        c.execute(query, (dado_limpo, dado_limpo, dado_limpo))
+        registros = c.fetchall()
+    except Exception as e:
+        print("Erro ao consultar:", e)
+        registros = []
+    finally:
+        conn.close()
 
     if registros:
         nome = registros[0][0] or "-"
@@ -256,7 +272,6 @@ def consultar():
             "encontrado": False,
             "mensagem": "Nenhum registro encontrado."
         })
-
 
 def normalizar_cpf(cpf_raw):
     cpf = "".join(filter(str.isdigit, str(cpf_raw)))
