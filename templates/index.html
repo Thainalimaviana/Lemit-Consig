@@ -109,12 +109,11 @@
 
         const telefones = (data.telefones && data.telefones.length)
           ? data.telefones.map(tel => `
-      <span class="telefone-item">
+      <div class="telefone-item">
         <i class="fa fa-phone"></i> ${tel}
-      </span>
-    `).join("<br>")
+      </div>
+    `).join("")
           : "-";
-
         document.getElementById("res-tel").innerHTML = telefones;
 
 
