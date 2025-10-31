@@ -108,9 +108,15 @@
         document.getElementById("res-cpf").textContent = cpf || "-";
 
         const telefones = (data.telefones && data.telefones.length)
-          ? data.telefones.join(" | ")
+          ? data.telefones.map(tel => `
+      <span class="telefone-item">
+        <i class="fa fa-phone"></i> ${tel}
+      </span>
+    `).join("<br>")
           : "-";
-        document.getElementById("res-tel").textContent = telefones;
+
+        document.getElementById("res-tel").innerHTML = telefones;
+
 
         msgNao.style.display = "none";
       } else {

@@ -128,10 +128,29 @@
       margin: 0 auto;
       padding-top: 60px;
     }
+
+    @keyframes flutuarLogo {
+      0% {
+        transform: translateY(0);
+      }
+
+      50% {
+        transform: translateY(-6px);
+      }
+
+      100% {
+        transform: translateY(0);
+      }
+    }
+
+    .logo-login {
+      animation: flutuarLogo 3s ease-in-out infinite;
+    }
   </style>
 </head>
 
 <script src="/static/js/theme.js"></script>
+
 <body class="pagina">
   <div class="login-container">
     <div class="topo-login">

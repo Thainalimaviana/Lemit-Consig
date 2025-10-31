@@ -484,6 +484,10 @@ select.barra-cpf {
   background-color: #006d19;
   transform: translateY(2px);
 }
-
+.telefone-item i {
+  color: var(--cor-texto);
+  margin-right: 6px;
+  transition: color 0.3s ease;
+}
 
 
