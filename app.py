@@ -4,6 +4,8 @@ from datetime import datetime
 import pandas as pd
 import sqlite3
 import os
+import threading
+import time
 
 try:
     import psycopg
@@ -275,6 +277,7 @@ def consultar():
             "mensagem": "Nenhum registro encontrado."
         })
 
+
 @app.route("/importar", methods=["GET", "POST"])
 def importar():
     if "user" not in session or session.get("role") != "admin":
@@ -285,108 +288,87 @@ def importar():
         if not arquivo or not arquivo.filename.endswith(".csv"):
             return render_template("importar.html", erro="Envie um arquivo CSV válido.")
 
-        try:
-            chunks = pd.read_csv(
-                arquivo,
-                dtype=str,
-                sep=";",
-                keep_default_na=False,
-                encoding="utf-8",
-                chunksize=2000
-            )
+        caminho_temp = os.path.join("uploads", f"import_{int(time.time())}.csv")
+        os.makedirs("uploads", exist_ok=True)
+        arquivo.save(caminho_temp)
 
-            novos_total = 0
-            atualizados_total = 0
+        def processar_em_background(caminho):
+            try:
+                print(f"📦 Iniciando importação: {caminho}")
+                chunks = pd.read_csv(
+                    caminho,
+                    dtype=str,
+                    sep=";",
+                    keep_default_na=False,
+                    encoding="utf-8",
+                    chunksize=1000
+                )
 
-            for chunk_index, df in enumerate(chunks, start=1):
-                print(f"🔹 Processando bloco {chunk_index} com {len(df)} linhas...")
+                total_novos = total_atualizados = 0
 
-                if DATABASE_URL and psycopg:
-                    conn = psycopg.connect(DATABASE_URL)
-                else:
-                    conn = sqlite3.connect("local.db", check_same_thread=False)
+                for i, df in enumerate(chunks, start=1):
+                    print(f"🔹 Processando bloco {i} com {len(df)} linhas...")
+                    conn = get_conn()
+                    c = conn.cursor()
+                    placeholder = "?" if isinstance(conn, sqlite3.Connection) else "%s"
 
-                c = conn.cursor()
-                placeholder = "?" if isinstance(conn, sqlite3.Connection) else "%s"
-                novos = atualizados = 0
+                    novos = atualizados = 0
+                    for _, row in df.iterrows():
+                        nome = str(row.get("nome", "")).strip()
+                        cpf = "".join(ch for ch in str(row.get("cpf", "")).strip() if ch.isdigit())
 
-                for _, row in df.iterrows():
-                    nome = str(row.get("nome", "")).strip()
-
-                    cpf_raw = row.get("cpf", "")
-                    cpf = ""
-                    try:
-                        if isinstance(cpf_raw, float):
-                            cpf = str(int(cpf_raw))
-                        else:
-                            cpf_str = str(cpf_raw).strip()
-                            if "e" in cpf_str.lower():
-                                cpf = str(int(float(cpf_str)))
-                            else:
-                                cpf = "".join(ch for ch in cpf_str if ch.isdigit())
-                    except Exception:
-                        cpf = ""
-
-                    if not cpf:
-                        continue
-
-                    telefones = [
-                        str(row.get(col, "")).strip()
-                        for col in row.index
-                        if "telefone" in col.lower() and str(row.get(col, "")).strip()
-                    ]
-
-                    c.execute(f"""
-                        SELECT id FROM clientes
-                        WHERE REPLACE(REPLACE(REPLACE(cpf, '.', ''), '-', ''), ' ', '') = {placeholder}
-                           OR REPLACE(REPLACE(REPLACE(LTRIM(cpf, '0'), '.', ''), '-', ''), ' ', '') = REPLACE({placeholder}, '^0+', '')
-                    """, (cpf, cpf))
-                    cliente = c.fetchone()
-
-                    if cliente:
-                        cliente_id = cliente[0]
-                        atualizados += 1
-                    else:
-                        if isinstance(conn, sqlite3.Connection):
-                            c.execute(
-                                f"INSERT INTO clientes (nome, cpf) VALUES ({placeholder}, {placeholder})",
-                                (nome, cpf),
-                            )
-                            cliente_id = c.lastrowid
-                        else:
-                            c.execute(
-                                f"INSERT INTO clientes (nome, cpf) VALUES ({placeholder}, {placeholder}) RETURNING id",
-                                (nome, cpf),
-                            )
-                            cliente_id = c.fetchone()[0]
-                        novos += 1
-
-                    for tel in telefones:
-                        if not tel:
+                        if not cpf:
                             continue
-                        c.execute(
-                            f"SELECT 1 FROM telefones WHERE cliente_id = {placeholder} AND telefone = {placeholder}",
-                            (cliente_id, tel),
-                        )
-                        if not c.fetchone():
+
+                        telefones = [
+                            str(row.get(col, "")).strip()
+                            for col in row.index
+                            if "telefone" in col.lower() and str(row.get(col, "")).strip()
+                        ]
+
+                        c.execute(f"SELECT id FROM clientes WHERE cpf = {placeholder}", (cpf,))
+                        cliente = c.fetchone()
+
+                        if cliente:
+                            cliente_id = cliente[0]
+                            atualizados += 1
+                        else:
                             c.execute(
-                                f"INSERT INTO telefones (cliente_id, telefone) VALUES ({placeholder}, {placeholder})",
+                                f"INSERT INTO clientes (nome, cpf) VALUES ({placeholder}, {placeholder}) RETURNING id"
+                                if not isinstance(conn, sqlite3.Connection)
+                                else f"INSERT INTO clientes (nome, cpf) VALUES ({placeholder}, {placeholder})",
+                                (nome, cpf),
+                            )
+                            cliente_id = c.fetchone()[0] if not isinstance(conn, sqlite3.Connection) else c.lastrowid
+                            novos += 1
+
+                        for tel in telefones:
+                            if not tel:
+                                continue
+                            c.execute(
+                                f"SELECT 1 FROM telefones WHERE cliente_id = {placeholder} AND telefone = {placeholder}",
                                 (cliente_id, tel),
                             )
+                            if not c.fetchone():
+                                c.execute(
+                                    f"INSERT INTO telefones (cliente_id, telefone) VALUES ({placeholder}, {placeholder})",
+                                    (cliente_id, tel),
+                                )
 
-                conn.commit()
-                conn.close()
+                    conn.commit()
+                    conn.close()
+                    total_novos += novos
+                    total_atualizados += atualizados
 
-                novos_total += novos
-                atualizados_total += atualizados
+                print(f"✅ Importação concluída: {total_novos} novos / {total_atualizados} atualizados.")
+                os.remove(caminho)
 
-            return render_template(
-                "importar.html",
-                sucesso=f"✅ Importação concluída! {novos_total} novos e {atualizados_total} atualizados (processado em blocos de 2000 linhas)."
-            )
+            except Exception as e:
+                print("❌ Erro na importação:", e)
 
-        except Exception as e:
-            return render_template("importar.html", erro=f"Erro ao importar: {e}")
+        threading.Thread(target=processar_em_background, args=(caminho_temp,)).start()
+
+        return render_template("importar.html", sucesso="📤 Arquivo recebido! A importação será processada em segundo plano (pode levar alguns minutos).")
 
     return render_template("importar.html")
 
