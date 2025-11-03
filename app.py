@@ -288,13 +288,30 @@ def importar():
         if not arquivo or not arquivo.filename.endswith(".csv"):
             return render_template("importar.html", erro="Envie um arquivo CSV válido.")
 
-        caminho_temp = os.path.join("uploads", f"import_{int(time.time())}.csv")
         os.makedirs("uploads", exist_ok=True)
+        os.makedirs("status", exist_ok=True)
+
+        caminho_temp = os.path.join("uploads", f"import_{int(time.time())}.csv")
+        status_path = os.path.join("status", "status_import.json")
+
         arquivo.save(caminho_temp)
+
+        with open(status_path, "w", encoding="utf-8") as f:
+            json.dump({
+                "status": "Aguardando início",
+                "progresso": 0,
+                "novos": 0,
+                "atualizados": 0
+            }, f)
 
         def processar_em_background(caminho):
             try:
                 print(f"📦 Iniciando importação: {caminho}")
+
+                total_linhas = sum(1 for _ in open(caminho, encoding="utf-8")) - 1
+                processadas = 0
+                total_novos = total_atualizados = 0
+
                 chunks = pd.read_csv(
                     caminho,
                     dtype=str,
@@ -303,8 +320,6 @@ def importar():
                     encoding="utf-8",
                     chunksize=1000
                 )
-
-                total_novos = total_atualizados = 0
 
                 for i, df in enumerate(chunks, start=1):
                     print(f"🔹 Processando bloco {i} com {len(df)} linhas...")
@@ -316,7 +331,6 @@ def importar():
                     for _, row in df.iterrows():
                         nome = str(row.get("nome", "")).strip()
                         cpf = "".join(ch for ch in str(row.get("cpf", "")).strip() if ch.isdigit())
-
                         if not cpf:
                             continue
 
@@ -333,13 +347,18 @@ def importar():
                             cliente_id = cliente[0]
                             atualizados += 1
                         else:
-                            c.execute(
-                                f"INSERT INTO clientes (nome, cpf) VALUES ({placeholder}, {placeholder}) RETURNING id"
-                                if not isinstance(conn, sqlite3.Connection)
-                                else f"INSERT INTO clientes (nome, cpf) VALUES ({placeholder}, {placeholder})",
-                                (nome, cpf),
-                            )
-                            cliente_id = c.fetchone()[0] if not isinstance(conn, sqlite3.Connection) else c.lastrowid
+                            if isinstance(conn, sqlite3.Connection):
+                                c.execute(
+                                    f"INSERT INTO clientes (nome, cpf) VALUES ({placeholder}, {placeholder})",
+                                    (nome, cpf),
+                                )
+                                cliente_id = c.lastrowid
+                            else:
+                                c.execute(
+                                    f"INSERT INTO clientes (nome, cpf) VALUES ({placeholder}, {placeholder}) RETURNING id",
+                                    (nome, cpf),
+                                )
+                                cliente_id = c.fetchone()[0]
                             novos += 1
 
                         for tel in telefones:
@@ -357,20 +376,60 @@ def importar():
 
                     conn.commit()
                     conn.close()
+
                     total_novos += novos
                     total_atualizados += atualizados
+                    processadas += len(df)
+
+                    progresso_atual = round((processadas / total_linhas) * 100, 2)
+                    if progresso_atual > 100:
+                        progresso_atual = 100
+
+                    with open(status_path, "w", encoding="utf-8") as f:
+                        json.dump({
+                            "status": f"Processando bloco {i}",
+                            "progresso": progresso_atual,
+                            "novos": total_novos,
+                            "atualizados": total_atualizados
+                        }, f)
+
+                with open(status_path, "w", encoding="utf-8") as f:
+                    json.dump({
+                        "status": "Concluído",
+                        "progresso": 100,
+                        "novos": total_novos,
+                        "atualizados": total_atualizados
+                    }, f)
 
                 print(f"✅ Importação concluída: {total_novos} novos / {total_atualizados} atualizados.")
                 os.remove(caminho)
 
             except Exception as e:
                 print("❌ Erro na importação:", e)
+                with open(status_path, "w", encoding="utf-8") as f:
+                    json.dump({
+                        "status": f"Erro: {e}",
+                        "progresso": 0
+                    }, f)
 
         threading.Thread(target=processar_em_background, args=(caminho_temp,)).start()
 
-        return render_template("importar.html", sucesso="📤 Arquivo recebido! A importação será processada em segundo plano (pode levar alguns minutos).")
+        return render_template(
+            "importar.html",
+            sucesso="📤 Arquivo recebido! A importação será processada em segundo plano (pode levar alguns minutos)."
+        )
 
     return render_template("importar.html")
+
+
+@app.route("/status-import")
+def status_import():
+    status_path = os.path.join("status", "status_import.json")
+    if os.path.exists(status_path):
+        with open(status_path, "r", encoding="utf-8") as f:
+            return jsonify(json.load(f))
+    return jsonify({"status": "Aguardando início", "progresso": 0})
+
 
 @app.route("/usuarios")
 def usuarios():

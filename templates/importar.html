@@ -61,6 +61,51 @@
       color: var(--cor-texto);
       font-weight: 500;
     }
+
+    .progresso-container {
+      text-align: center;
+      margin-top: 20px;
+    }
+
+    .barra-progresso {
+      width: 80%;
+      height: 20px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 20px;
+      overflow: hidden;
+      margin: 0 auto;
+      box-shadow: 0 0 6px rgba(0, 255, 0, 0.3);
+    }
+
+    .progresso {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #00c000, #009000);
+      border-radius: 20px;
+      transition: width 0.5s ease;
+      animation: brilho 2s infinite alternate;
+    }
+
+    @keyframes brilho {
+      from {
+        filter: brightness(1);
+      }
+
+      to {
+        filter: brightness(1.6);
+      }
+    }
+
+    .texto-progresso {
+      margin-top: 8px;
+      font-weight: 600;
+      color: var(--cor-texto);
+    }
+
+    .progresso.completo {
+      background: linear-gradient(90deg, #00ff44, #00c000);
+      animation: none;
+    }
   </style>
 </head>
 
@@ -125,8 +170,43 @@
       </form>
     </div>
   </div>
+  <div class="progresso-container" id="progressoContainer" style="display:none; margin-top: 30px;">
+    <div class="barra-progresso">
+      <div class="progresso" id="progressoBarra"></div>
+    </div>
+    <p id="progressoTexto" class="texto-progresso">Aguardando início...</p>
+  </div>
 
   <script>
+    async function atualizarProgresso() {
+      try {
+        const r = await fetch("/status-import");
+        const data = await r.json();
+
+        const container = document.getElementById("progressoContainer");
+        const barra = document.getElementById("progressoBarra");
+        const texto = document.getElementById("progressoTexto");
+
+        if (data.status && data.status !== "Aguardando início") {
+          container.style.display = "block";
+          const progresso = data.progresso || 0;
+          barra.style.width = progresso + "%";
+          texto.innerText = `${data.status} (${progresso}%) — ${data.novos || 0} novos / ${data.atualizados || 0} atualizados`;
+
+          if (progresso >= 100) {
+            texto.innerText = `✅ Importação concluída (${data.novos} novos / ${data.atualizados} atualizados)`;
+            barra.style.width = "100%";
+            barra.classList.add("completo");
+          }
+        }
+      } catch (e) {
+        console.warn("Erro ao buscar status:", e);
+      }
+    }
+
+    setInterval(atualizarProgresso, 3000);
+    atualizarProgresso();
+
     const menuToggle = document.getElementById("menuToggle");
     const sidebar = document.getElementById("sidebar");
     const content = document.querySelector(".content");
