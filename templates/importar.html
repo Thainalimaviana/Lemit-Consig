@@ -63,8 +63,10 @@
     }
 
     .progresso-container {
+      width: 90%;
+      max-width: 500px;
+      margin: 30px auto 0 auto;
       text-align: center;
-      margin-top: 20px;
     }
 
     .barra-progresso {
@@ -106,13 +108,6 @@
       background: linear-gradient(90deg, #00ff44, #00c000);
       animation: none;
     }
-
-    .progresso-container {
-      width: 90%;
-      max-width: 500px;
-      margin: 30px auto 0 auto;
-      text-align: center;
-    }
   </style>
 </head>
 
@@ -150,12 +145,10 @@
 
     <div class="container">
       {% if erro %}
-      <div style="background:rgba(255,0,0,0.2);padding:10px;border-radius:8px;color:#000000;margin-bottom:10px;">{{ erro
-        }}</div>
+      <div style="background:rgba(255,0,0,0.2);padding:10px;border-radius:8px;color:#000;margin-bottom:10px;">{{ erro }}</div>
       {% endif %}
       {% if sucesso %}
-      <div style="background:rgba(0,255,0,0.2);padding:10px;border-radius:8px;color:#000000;margin-bottom:10px;">{{
-        sucesso }}</div>
+      <div style="background:rgba(0,255,0,0.2);padding:10px;border-radius:8px;color:#000;margin-bottom:10px;">{{ sucesso }}</div>
       {% endif %}
 
       <form method="POST" enctype="multipart/form-data">
@@ -175,81 +168,64 @@
           <i class="fa fa-arrow-left"></i>Voltar
         </a>
       </form>
-    </div>
-    <form method="POST" enctype="multipart/form-data">
-      <p>Envie um arquivo <strong>.csv</strong> contendo as colunas:</p>
-      <p><code>nome, cpf, telefone1, telefone2, telefone3, telefone4, telefone5</code></p>
 
-      <div class="file-upload-wrapper">
-        <input type="file" id="arquivo" name="arquivo" accept=".csv" required onchange="mostrarNomeArquivo(this)">
-        <label class="file-upload-label" for="arquivo">
-          <i class="fa fa-file-csv"></i>
-          <span class="file-upload-text" id="file-name">Escolher arquivo .csv</span>
-        </label>
+      <div class="progresso-container" id="progressoContainer" style="display:none; margin-top: 35px;">
+        <div class="barra-progresso">
+          <div class="progresso" id="progressoBarra"></div>
+        </div>
+        <p id="progressoTexto" class="texto-progresso">Aguardando início...</p>
       </div>
-
-      <button class="azul" type="submit"><i class="fa fa-upload"></i> Importar</button>
-      <a href="/index" class="btn-voltar-topo" style="margin-left:10px;">
-        <i class="fa fa-arrow-left"></i>Voltar
-      </a>
-    </form>
-
-    <div class="progresso-container" id="progressoContainer" style="display:none; margin-top: 35px;">
-      <div class="barra-progresso">
-        <div class="progresso" id="progressoBarra"></div>
-      </div>
-      <p id="progressoTexto" class="texto-progresso">Aguardando início...</p>
     </div>
+  </div>
 
-    <script>
-      async function atualizarProgresso() {
-        try {
-          const r = await fetch("/status-import");
-          const data = await r.json();
+  <script>
+    async function atualizarProgresso() {
+      try {
+        const r = await fetch("/status-import");
+        const data = await r.json();
 
-          const container = document.getElementById("progressoContainer");
-          const barra = document.getElementById("progressoBarra");
-          const texto = document.getElementById("progressoTexto");
+        const container = document.getElementById("progressoContainer");
+        const barra = document.getElementById("progressoBarra");
+        const texto = document.getElementById("progressoTexto");
 
-          if (data.status && data.status !== "Aguardando início") {
-            container.style.display = "block";
-            const progresso = data.progresso || 0;
-            barra.style.width = progresso + "%";
-            texto.innerText = `${data.status} (${progresso}%) — ${data.novos || 0} novos / ${data.atualizados || 0} atualizados`;
+        if (data.status && data.status !== "Aguardando início") {
+          container.style.display = "block";
+          const progresso = data.progresso || 0;
+          barra.style.width = progresso + "%";
+          texto.innerText = `${data.status} (${progresso}%) — ${data.novos || 0} novos / ${data.atualizados || 0} atualizados`;
 
-            if (progresso >= 100) {
-              texto.innerText = `✅ Importação concluída (${data.novos} novos / ${data.atualizados} atualizados)`;
-              barra.style.width = "100%";
-              barra.classList.add("completo");
-            }
+          if (progresso >= 100) {
+            texto.innerText = `✅ Importação concluída (${data.novos} novos / ${data.atualizados} atualizados)`;
+            barra.style.width = "100%";
+            barra.classList.add("completo");
           }
-        } catch (e) {
-          console.warn("Erro ao buscar status:", e);
         }
+      } catch (e) {
+        console.warn("Erro ao buscar status:", e);
       }
+    }
 
-      setInterval(atualizarProgresso, 3000);
-      atualizarProgresso();
+    setInterval(atualizarProgresso, 3000);
+    atualizarProgresso();
 
-      const menuToggle = document.getElementById("menuToggle");
-      const sidebar = document.getElementById("sidebar");
-      const content = document.querySelector(".content");
+    const menuToggle = document.getElementById("menuToggle");
+    const sidebar = document.getElementById("sidebar");
+    const content = document.querySelector(".content");
 
-      menuToggle.addEventListener("click", () => {
-        sidebar.classList.toggle("active");
-        content.classList.toggle("active");
-        menuToggle.classList.toggle("mover");
-      });
+    menuToggle.addEventListener("click", () => {
+      sidebar.classList.toggle("active");
+      content.classList.toggle("active");
+      menuToggle.classList.toggle("mover");
+    });
 
-      function mostrarNomeArquivo(input) {
-        const label = document.getElementById('file-name');
-        if (input.files && input.files.length > 0) {
-          label.textContent = input.files[0].name;
-        } else {
-          label.textContent = "Escolher arquivo .csv";
-        }
+    function mostrarNomeArquivo(input) {
+      const label = document.getElementById('file-name');
+      if (input.files && input.files.length > 0) {
+        label.textContent = input.files[0].name;
+      } else {
+        label.textContent = "Escolher arquivo .csv";
       }
-    </script>
+    }
+  </script>
 </body>
-
 </html>
