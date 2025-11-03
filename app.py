@@ -286,19 +286,29 @@ def importar():
             return render_template("importar.html", erro="Envie um arquivo CSV válido.")
 
         try:
-            df = pd.read_csv(arquivo, dtype=str, sep=";", keep_default_na=False, encoding="utf-8").fillna("")
+            chunks = pd.read_csv(
+                arquivo,
+                dtype=str,
+                sep=";",
+                keep_default_na=False,
+                encoding="utf-8",
+                chunksize=2000
+            )
 
-            if DATABASE_URL and psycopg:
-                bancos = [psycopg.connect(DATABASE_URL)]
-            else:
-                bancos = [sqlite3.connect("local.db", check_same_thread=False)]
+            novos_total = 0
+            atualizados_total = 0
 
-            novos = 0
-            atualizados = 0
+            for chunk_index, df in enumerate(chunks, start=1):
+                print(f"🔹 Processando bloco {chunk_index} com {len(df)} linhas...")
 
-            for conn in bancos:
+                if DATABASE_URL and psycopg:
+                    conn = psycopg.connect(DATABASE_URL)
+                else:
+                    conn = sqlite3.connect("local.db", check_same_thread=False)
+
                 c = conn.cursor()
                 placeholder = "?" if isinstance(conn, sqlite3.Connection) else "%s"
+                novos = atualizados = 0
 
                 for _, row in df.iterrows():
                     nome = str(row.get("nome", "")).strip()
@@ -367,9 +377,12 @@ def importar():
                 conn.commit()
                 conn.close()
 
+                novos_total += novos
+                atualizados_total += atualizados
+
             return render_template(
                 "importar.html",
-                sucesso=f"Importação concluída! {novos} novos e {atualizados} atualizados."
+                sucesso=f"✅ Importação concluída! {novos_total} novos e {atualizados_total} atualizados (processado em blocos de 2000 linhas)."
             )
 
         except Exception as e:
