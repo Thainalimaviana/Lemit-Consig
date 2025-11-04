@@ -114,6 +114,30 @@ def init_db():
     conn.commit()
     conn.close()
 
+def optimize_db():
+    conn = get_conn()
+    if isinstance(conn, sqlite3.Connection):
+        conn.close()
+        return
+    try:
+        c = conn.cursor()
+        c.execute("""
+            CREATE INDEX IF NOT EXISTS idx_clientes_cpf_clean
+            ON clientes ((REPLACE(REPLACE(REPLACE(cpf, '.', ''), '-', ''), ' ', '')));
+        """)
+        c.execute("""
+            CREATE INDEX IF NOT EXISTS idx_telefones_cliente
+            ON telefones (cliente_id);
+        """)
+        c.execute("ANALYZE clientes;")
+        c.execute("ANALYZE telefones;")
+        conn.commit()
+        print("✅ Banco otimizado com sucesso (índices + estatísticas atualizadas).")
+    except Exception as e:
+        print("⚠️ Erro ao otimizar banco:", e)
+    finally:
+        conn.close()
+
 def inserir_ou_atualizar_cliente(nome, cpf, telefones):
     conn = get_conn()
     c = conn.cursor()
@@ -155,11 +179,11 @@ def inserir_ou_atualizar_cliente(nome, cpf, telefones):
     finally:
         conn.close()
 
-
 @app.before_request
 def ensure_db():
     if not hasattr(app, "_db_init_done"):
         init_db()
+        optimize_db()
         app._db_init_done = True
 
 @app.route("/", methods=["GET", "POST"])
@@ -184,7 +208,6 @@ def login():
         return render_template("login.html", erro="Usuário ou senha inválidos")
 
     return render_template("login.html")
-
 
 @app.route("/logout")
 def logout():
