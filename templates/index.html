@@ -53,6 +53,7 @@
           <option value="telefone">Telefone</option>
         </select>
         <input type="text" id="dado" name="dado" class="barra-cpf" placeholder="Digite o CPF ou telefone" required>
+        <div class="spinner" id="spinner" style="display:none;"></div>
         <div class="button-group">
           <button class="azul" type="submit"><i class="fa fa-search"></i> Consultar</button>
           <button id="btn-limpar" class="vermelho" type="button"><i class="fa fa-trash"></i> Limpar</button>
@@ -82,47 +83,62 @@
     const form = document.getElementById("form-consulta");
     const resultadoDiv = document.getElementById("resultado");
     const msgNao = document.getElementById("msg-nao-encontrado");
+    const spinner = document.getElementById("spinner");
 
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
       const dado = document.getElementById("dado").value.trim();
 
+      if (!dado) {
+        alert("Digite um CPF ou telefone para consultar.");
+        return;
+      }
+
+      spinner.style.display = "block";
+      document.querySelector("button.azul").disabled = true;
+
       const formData = new FormData();
       formData.append("dado", dado);
 
-      const res = await fetch("/consultar", {
-        method: "POST",
-        body: formData
-      });
+      try {
+        const res = await fetch("/consultar", {
+          method: "POST",
+          body: formData
+        });
 
-      const data = await res.json();
-      resultadoDiv.style.display = "block";
+        const data = await res.json();
+        resultadoDiv.style.display = "block";
 
-      if (data.encontrado) {
-        document.getElementById("res-nome").textContent = data.nome || "-";
+        if (data.encontrado) {
+          document.getElementById("res-nome").textContent = data.nome || "-";
 
-        let cpf = data.cpf || "";
-        if (cpf.length === 11 && /^\d+$/.test(cpf)) {
-          cpf = cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
+          let cpf = data.cpf || "";
+          if (cpf.length === 11 && /^\d+$/.test(cpf)) {
+            cpf = cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
+          }
+          document.getElementById("res-cpf").textContent = cpf || "-";
+
+          const telefones = (data.telefones && data.telefones.length)
+            ? data.telefones.map(tel => `
+            <div class="telefone-item">
+              <i class="fa fa-phone"></i> ${tel}
+            </div>`).join("")
+            : "-";
+          document.getElementById("res-tel").innerHTML = telefones;
+
+          msgNao.style.display = "none";
+        } else {
+          document.getElementById("res-nome").textContent = "";
+          document.getElementById("res-cpf").textContent = "";
+          document.getElementById("res-tel").textContent = "";
+          msgNao.style.display = "block";
         }
-        document.getElementById("res-cpf").textContent = cpf || "-";
-
-        const telefones = (data.telefones && data.telefones.length)
-          ? data.telefones.map(tel => `
-      <div class="telefone-item">
-        <i class="fa fa-phone"></i> ${tel}
-      </div>
-    `).join("")
-          : "-";
-        document.getElementById("res-tel").innerHTML = telefones;
-
-
-        msgNao.style.display = "none";
-      } else {
-        document.getElementById("res-nome").textContent = "";
-        document.getElementById("res-cpf").textContent = "";
-        document.getElementById("res-tel").textContent = "";
-        msgNao.style.display = "block";
+      } catch (err) {
+        console.error("Erro na consulta:", err);
+        alert("Erro ao consultar. Tente novamente.");
+      } finally {
+        spinner.style.display = "none";
+        document.querySelector("button.azul").disabled = false;
       }
     });
 

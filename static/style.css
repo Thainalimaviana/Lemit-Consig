@@ -161,7 +161,7 @@ body.pagina {
     transition: margin-left 0.4s ease;
 }
 
-.sidebar.active ~ .content {
+.sidebar.active~.content {
     margin-left: 230px;
 }
 
@@ -332,8 +332,13 @@ table tr:hover {
 }
 
 @keyframes spin {
-    from { transform: translateY(-50%) rotate(0deg); }
-    to { transform: translateY(-50%) rotate(360deg); }
+    from {
+        transform: translateY(-50%) rotate(0deg);
+    }
+
+    to {
+        transform: translateY(-50%) rotate(360deg);
+    }
 }
 
 .loading-spinner {
@@ -385,14 +390,15 @@ table tr:hover {
 }
 
 .preenchimento.postgre {
-    background: linear-gradient(90deg, rgba(0,255,170,0.45), rgba(0,150,255,0.6));
+    background: linear-gradient(90deg, rgba(0, 255, 170, 0.45), rgba(0, 150, 255, 0.6));
     backdrop-filter: blur(2px);
 }
 
 .preenchimento.sqlite {
-    background: linear-gradient(90deg, rgba(255,140,0,0.5), rgba(255,0,0,0.6));
+    background: linear-gradient(90deg, rgba(255, 140, 0, 0.5), rgba(255, 0, 0, 0.6));
     backdrop-filter: blur(2px);
 }
+
 select option {
     color: #000 !important;
     background-color: #fff !important;
@@ -443,60 +449,79 @@ select.barra-cpf {
     opacity: 0.7;
     border-radius: 2px;
 }
+
 .btn-editar {
-  background-color: #4c94e7;
-  color: white;
-  padding: 8px 16px;
-  border-radius: 8px;
-  text-decoration: none;
-  font-weight: 600;
-  font-size: 15px;
-  border: none;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  box-shadow: 0 4px 0 rgba(0, 0, 0, 0.2);
-  transition: all 0.2s ease-in-out;
+    background-color: #4c94e7;
+    color: white;
+    padding: 8px 16px;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 15px;
+    border: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    box-shadow: 0 4px 0 rgba(0, 0, 0, 0.2);
+    transition: all 0.2s ease-in-out;
 }
 
 .btn-editar:hover {
-  background-color: #1565c0;
-  transform: translateY(2px);
+    background-color: #1565c0;
+    transform: translateY(2px);
 }
 
 .btn-excluir {
-  background-color: #00ac39;
-  color: white;
-  padding: 8px 16px;
-  border-radius: 8px;
-  border: none;
-  font-weight: 600;
-  font-size: 15px;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  box-shadow: 0 4px 0 rgba(0, 0, 0, 0.2);
-  transition: all 0.2s ease-in-out;
+    background-color: #00ac39;
+    color: white;
+    padding: 8px 16px;
+    border-radius: 8px;
+    border: none;
+    font-weight: 600;
+    font-size: 15px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    box-shadow: 0 4px 0 rgba(0, 0, 0, 0.2);
+    transition: all 0.2s ease-in-out;
 }
 
 .btn-excluir:hover {
-  background-color: #006d19;
-  transform: translateY(2px);
+    background-color: #006d19;
+    transform: translateY(2px);
 }
 
 .telefone-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: 6px;
-  font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 6px;
+    font-weight: 500;
 }
 
 .telefone-item i {
-  color: var(--cor-texto);
-  font-size: 15px;
+    color: var(--cor-texto);
+    font-size: 15px;
 }
 
+.spinner {
+    border: 4px solid rgba(255, 255, 255, 0.2);
+    border-top: 4px solid var(--cor-texto);
+    border-radius: 50%;
+    width: 35px;
+    height: 35px;
+    animation: spin 1s linear infinite;
+    margin: 15px auto 0 auto;
+    display: block;
+}
 
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
 
+    to {
+        transform: rotate(360deg);
+    }
+}
